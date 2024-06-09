@@ -1,85 +1,167 @@
-library(readr)
+# Define the server logic
+server <- function(input, output) {
+    # Championship plot
+    output$championshipPlot <- renderPlot({
+        season <- input$season
+        feature <- input$feature
+        championship <- input$championship
 
-circuits <- read_csv("../data/circuits.csv")
-constructor_results <- read_csv("../data/constructor_results.csv")
-constructor_standings <- read_csv("../data/constructor_standings.csv")
-constructors <- read_csv("../data/constructors.csv")
-driver_standings <- read_csv("../data/driver_standings.csv")
-drivers <- read_csv("../data/drivers.csv")
-lap_times <- read_csv("../data/lap_times.csv")
-pit_stops <- read_csv("../data/pit_stops.csv")
-qualifying <- read_csv("../data/qualifying.csv")
-races <- read_csv("../data/races.csv")
-results <- read_csv("../data/results.csv")
-seasons <- read_csv("../data/seasons.csv")
-sprint_results <- read_csv("../data/sprint_results.csv")
-status <- read_csv("../data/status.csv")
+        # Filter data for the selected season
+        season_results <- results %>%
+            inner_join(races, by = "raceId") %>%
+            filter(year == season)
 
-server <- function(input, output, session) {
-    # Load the data inside the server function
-    circuits <- read_csv("data/circuits.csv", show_col_types = FALSE)
-    constructor_results <- read_csv("data/constructor_results.csv", show_col_types = FALSE)
-    constructor_standings <- read_csv("data/constructor_standings.csv", show_col_types = FALSE)
-    constructors <- read_csv("data/constructors.csv", show_col_types = FALSE)
-    driver_standings <- read_csv("data/driver_standings.csv", show_col_types = FALSE)
-    drivers <- read_csv("data/drivers.csv", show_col_types = FALSE)
-    lap_times <- read_csv("data/lap_times.csv", show_col_types = FALSE)
-    pit_stops <- read_csv("data/pit_stops.csv", show_col_types = FALSE)
-    qualifying <- read_csv("data/qualifying.csv", show_col_types = FALSE)
-    races <- read_csv("data/races.csv", show_col_types = FALSE)
-    results <- read_csv("data/results.csv", show_col_types = FALSE)
-    seasons <- read_csv("data/seasons.csv", show_col_types = FALSE)
-    sprint_results <- read_csv("data/sprint_results.csv", show_col_types = FALSE)
-    status <- read_csv("data/status.csv", show_col_types = FALSE)
-
-    # Create reactive values
-    rv <- reactiveValues()
-
-    # Assign the unique season choices to reactive values
-    observe({
-        rv$seasonChoices <- unique(races$year)
-    })
-
-    standings <- reactive({
-        req(input$season)
-        if ("Driver Standings" %in% input$standingsType) {
-            driver_standings %>%
-                filter(raceId %in% races$raceId[races$year == input$season]) %>%
+        if (championship == "Drivers") {
+            # Calculate the selected feature for each driver
+            driver_data <- season_results %>%
+                group_by(driverId, constructorId) %>%
+                summarize(
+                    points = sum(points),
+                    wins = sum(ifelse(position == 1, 1, 0)),
+                    podiums = sum(ifelse(position %in% c(1, 2, 3), 1, 0)),
+                    finishes = sum(ifelse(statusId == 1, 1, 0))
+                ) %>%
                 left_join(drivers, by = "driverId") %>%
-                select(Position = position, Driver = surname, Points = points, Wins = wins)
+                left_join(constructors, by = "constructorId")
+
+            # Create the plot based on the selected feature
+            if (feature == "Points") {
+                ggplot(driver_data, aes(x = reorder(paste(forename, surname), -points), y = points, fill = name)) +
+                    geom_bar(stat = "identity") +
+                    xlab("Driver") +
+                    ylab("Points") +
+                    ggtitle(paste("Driver Points in", season)) +
+                    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+                    labs(fill = "Team")
+            } else if (feature == "Race Wins") {
+                ggplot(driver_data, aes(x = reorder(paste(forename, surname), -wins), y = wins, fill = name)) +
+                    geom_bar(stat = "identity") +
+                    xlab("Driver") +
+                    ylab("Race Wins") +
+                    ggtitle(paste("Driver Race Wins in", season)) +
+                    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+                    labs(fill = "Team")
+            } else if (feature == "Podiums") {
+                ggplot(driver_data, aes(x = reorder(paste(forename, surname), -podiums), y = podiums, fill = name)) +
+                    geom_bar(stat = "identity") +
+                    xlab("Driver") +
+                    ylab("Podiums") +
+                    ggtitle(paste("Driver Podiums in", season)) +
+                    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+                    labs(fill = "Team")
+            } else {
+                ggplot(driver_data, aes(x = reorder(paste(forename, surname), -finishes), y = finishes, fill = name)) +
+                    geom_bar(stat = "identity") +
+                    xlab("Driver") +
+                    ylab("Finishes") +
+                    ggtitle(paste("Driver Finishes in", season)) +
+                    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+                    labs(fill = "Team")
+            }
         } else {
-            data.frame()
+            # Calculate the selected feature for each constructor
+            constructor_data <- season_results %>%
+                group_by(constructorId) %>%
+                summarize(
+                    points = sum(points),
+                    wins = sum(ifelse(position == 1, 1, 0)),
+                    podiums = sum(ifelse(position %in% c(1, 2, 3), 1, 0)),
+                    finishes = sum(ifelse(statusId == 1, 1, 0))
+                ) %>%
+                left_join(constructors, by = "constructorId")
+
+            # Create the plot based on the selected feature
+            if (feature == "Points") {
+                ggplot(constructor_data, aes(x = reorder(name, -points), y = points, fill = name)) +
+                    geom_bar(stat = "identity") +
+                    xlab("Constructor") +
+                    ylab("Points") +
+                    ggtitle(paste("Constructor Points in", season)) +
+                    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+                    labs(fill = "Constructor")
+            } else if (feature == "Race Wins") {
+                ggplot(constructor_data, aes(x = reorder(name, -wins), y = wins, fill = name)) +
+                    geom_bar(stat = "identity") +
+                    xlab("Constructor") +
+                    ylab("Race Wins") +
+                    ggtitle(paste("Constructor Race Wins in", season)) +
+                    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+                    labs(fill = "Constructor")
+            } else if (feature == "Podiums") {
+                ggplot(constructor_data, aes(x = reorder(name, -podiums), y = podiums, fill = name)) +
+                    geom_bar(stat = "identity") +
+                    xlab("Constructor") +
+                    ylab("Podiums") +
+                    ggtitle(paste("Constructor Podiums in", season)) +
+                    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+                    labs(fill = "Constructor")
+            } else {
+                ggplot(constructor_data, aes(x = reorder(name, -finishes), y = finishes, fill = name)) +
+                    geom_bar(stat = "identity") +
+                    xlab("Constructor") +
+                    ylab("Finishes") +
+                    ggtitle(paste("Constructor Finishes in", season)) +
+                    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+                    labs(fill = "Constructor")
+            }
         }
     })
 
-    constructorStandings <- reactive({
-        req(input$season)
-        if ("Constructor Standings" %in% input$standingsType) {
-            constructor_standings %>%
-                filter(raceId %in% races$raceId[races$year == input$season]) %>%
-                left_join(constructors, by = "constructorId") %>%
-                select(Position = position, Constructor = name, Points = points, Wins = wins)
+    # Championship standings plot
+    output$championshipStandingsPlot <- renderPlot({
+        season <- input$season
+        championship <- input$championship
+
+        if (championship == "Drivers") {
+            # Filter data for the selected season
+            season_standings <- driver_standings %>%
+                inner_join(races, by = "raceId") %>%
+                filter(year == season) %>%
+                inner_join(drivers, by = "driverId")
+
+            # Prepare data for the line chart
+            driver_standings_data <- season_standings %>%
+                select(driverId, raceId, position) %>%
+                spread(driverId, position) %>%
+                left_join(races %>% select(raceId, round), by = "raceId") %>%
+                arrange(round) %>%
+                gather(driverId, position, -raceId, -round) %>%
+                mutate(driverId = as.numeric(driverId)) %>%
+                left_join(drivers, by = "driverId")
+
+            # Create the line chart
+            ggplot(driver_standings_data, aes(x = round, y = -position, group = driverId, color = paste(forename, surname))) +
+                geom_line() +
+                xlab("Race") +
+                ylab("Position") +
+                ggtitle(paste("Driver Standings in", season)) +
+                theme(legend.position = "bottom") +
+                guides(color = guide_legend(title = "Driver"))
         } else {
-            data.frame()
+            # Filter data for the selected season
+            season_standings <- constructor_standings %>%
+                inner_join(races, by = "raceId") %>%
+                filter(year == season) %>%
+                inner_join(constructors, by = "constructorId")
+
+            # Prepare data for the line chart
+            constructor_standings_data <- season_standings %>%
+                select(constructorId, raceId, position) %>%
+                spread(constructorId, position) %>%
+                left_join(races %>% select(raceId, round), by = "raceId") %>%
+                arrange(round) %>%
+                gather(constructorId, position, -raceId, -round) %>%
+                mutate(constructorId = as.numeric(constructorId)) %>%
+                left_join(constructors, by = "constructorId")
+
+            # Create the line chart
+            ggplot(constructor_standings_data, aes(x = round, y = -position, group = constructorId, color = name)) +
+                geom_line() +
+                xlab("Race") +
+                ylab("Position") +
+                ggtitle(paste("Constructor Standings in", season)) +
+                theme(legend.position = "bottom") +
+                guides(color = guide_legend(title = "Constructor"))
         }
-    })
-
-    output$standingsTable <- renderDataTable({
-        req(input$season)
-        rbind(standings(), constructorStandings())
-    })
-
-    output$raceResultsTable <- renderDataTable({
-        req(input$season)
-        results %>%
-            filter(raceId %in% races$raceId[races$year == input$season]) %>%
-            left_join(drivers, by = "driverId") %>%
-            left_join(constructors, by = "constructorId") %>%
-            select(Race = name.y, Driver = surname, Constructor = name.x, Grid = grid, Position = position, Points = points)
-    })
-
-    # Pass season choices to UI
-    output$seasonChoices <- renderUI({
-        selectInput("season", "Select Season", choices = rv$seasonChoices)
     })
 }
