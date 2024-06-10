@@ -1,3 +1,7 @@
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
 dashboardPage(
     dashboardHeader(title = "Formula 1 Analysis"),
     dashboardSidebar(
@@ -21,6 +25,10 @@ dashboardPage(
                     box(
                         title = "Championship Plot",
                         plotOutput("championshipPlot")
+                    ),
+                    box(
+                        title = "Feature Over Season",
+                        plotOutput("featureOverSeasonPlot")
                     ),
                     box(
                         title = "Championship Standings Plot",

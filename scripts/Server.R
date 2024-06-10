@@ -1,3 +1,8 @@
+library(shiny)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
 # Define the server logic
 server <- function(input, output) {
     # Championship plot
@@ -104,6 +109,71 @@ server <- function(input, output) {
                     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
                     labs(fill = "Constructor")
             }
+        }
+    })
+
+    # Feature plot
+    output$featureOverSeasonPlot <- renderPlot({
+        season <- input$season
+        championship <- input$championship
+        feature <- input$feature
+
+        if (championship == "Drivers") {
+            # Filter data for the selected season
+            season_results <- results %>%
+                inner_join(races, by = "raceId") %>%
+                filter(year == season) %>%
+                inner_join(drivers, by = "driverId")
+
+            # Prepare data for the line chart
+            driver_feature_data <- season_results %>%
+                group_by(driverId, round) %>%
+                summarize(feature_value = case_when(
+                    feature == "Points" ~ sum(points),
+                    feature == "Race Wins" ~ sum(ifelse(position == 1, 1, 0)),
+                    feature == "Podiums" ~ sum(ifelse(position %in% c(1, 2, 3), 1, 0)),
+                    feature == "Finishes" ~ sum(ifelse(statusId == 1, 1, 0))
+                )) %>%
+                group_by(driverId) %>%
+                mutate(cumulative_value = cumsum(feature_value)) %>%
+                left_join(drivers, by = "driverId")
+
+            # Create the line chart
+            ggplot(driver_feature_data, aes(x = round, y = cumulative_value, group = driverId, color = paste(forename, surname))) +
+                geom_line() +
+                xlab("Race") +
+                ylab(feature) +
+                ggtitle(paste("Driver", feature, "in", season)) +
+                theme(legend.position = "bottom") +
+                guides(color = guide_legend(title = "Driver"))
+        } else {
+            # Filter data for the selected season
+            season_results <- results %>%
+                inner_join(races, by = "raceId") %>%
+                filter(year == season) %>%
+                inner_join(constructors, by = "constructorId")
+
+            # Prepare data for the line chart
+            constructor_feature_data <- season_results %>%
+                group_by(constructorId, round) %>%
+                summarize(feature_value = case_when(
+                    feature == "Points" ~ sum(points),
+                    feature == "Race Wins" ~ sum(ifelse(position == 1, 1, 0)),
+                    feature == "Podiums" ~ sum(ifelse(position %in% c(1, 2, 3), 1, 0)),
+                    feature == "Finishes" ~ sum(ifelse(statusId == 1, 1, 0))
+                )) %>%
+                group_by(constructorId) %>%
+                mutate(cumulative_value = cumsum(feature_value)) %>%
+                left_join(constructors, by = "constructorId")
+
+            # Create the line chart
+            ggplot(constructor_feature_data, aes(x = round, y = cumulative_value, group = constructorId, color = name)) +
+                geom_line() +
+                xlab("Race") +
+                ylab(feature) +
+                ggtitle(paste("Constructor", feature, "in", season)) +
+                theme(legend.position = "bottom") +
+                guides(color = guide_legend(title = "Constructor"))
         }
     })
 

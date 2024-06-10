@@ -1,3 +1,5 @@
+# loading.R
+
 # Read the necessary data files
 drivers <- read.csv("../data/drivers.csv")
 constructors <- read.csv("../data/constructors.csv")
