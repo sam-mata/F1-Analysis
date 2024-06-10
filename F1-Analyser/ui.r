@@ -1,6 +1,8 @@
 library(dplyr)
 library(ggplot2)
 library(tidyr)
+library(shinydashboard)
+
 
 dashboardPage(
     dashboardHeader(title = "Formula 1 Analysis"),
@@ -57,6 +59,10 @@ dashboardPage(
                     box(
                         title = "Driver Status Distribution",
                         plotOutput("driverStatusPie")
+                    ),
+                    box(
+                        title = "Driver Average Placing by Season",
+                        plotOutput("driverAvgPlacingChart")
                     )
                 )
             ),
@@ -76,6 +82,10 @@ dashboardPage(
                     box(
                         title = "Constructor Points by Driver",
                         plotOutput("constructorPointsChart")
+                    ),
+                    box(
+                        title = "Constructor Points Proportion by Driver",
+                        plotOutput("constructorPointsPropChart")
                     )
                 )
             )

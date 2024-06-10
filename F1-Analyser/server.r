@@ -273,6 +273,12 @@ server <- function(input, output) {
                 group_by(status) %>%
                 summarize(count = n()) %>%
                 mutate(percentage = count / sum(count) * 100)
+            driver_avg_placing <- results %>%
+                inner_join(races, by = "raceId") %>%
+                filter(driverId == driver_info$driverId) %>%
+                group_by(year) %>%
+                summarize(avg_placing = mean(positionOrder)) %>%
+                arrange(year)
 
             output$driverStatusPie <- renderPlot({
                 ggplot(driver_status, aes(x = "", y = percentage, fill = status)) +
@@ -282,6 +288,16 @@ server <- function(input, output) {
                     scale_fill_discrete(name = "Status") +
                     ggtitle(paste("Status Distribution for", driver_info$forename, driver_info$surname)) +
                     theme(plot.title = element_text(hjust = 0.5))
+            })
+            output$driverAvgPlacingChart <- renderPlot({
+                ggplot(driver_avg_placing, aes(x = year, y = -avg_placing)) +
+                    geom_line() +
+                    geom_point() +
+                    xlab("Season") +
+                    ylab("Average Placing") +
+                    ggtitle(paste("Average Placing by Season for", driver_info$forename, driver_info$surname)) +
+                    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+                    scale_y_continuous(limits = c(-max(driver_avg_placing$avg_placing), 0), breaks = seq(-max(driver_avg_placing$avg_placing), 0, by = 1))
             })
         } else {
             output$driverDetails <- renderPrint({
@@ -298,6 +314,13 @@ server <- function(input, output) {
         constructor_name <- input$constructorSearch
         constructor_info <- constructors %>%
             filter(grepl(constructor_name, name, ignore.case = TRUE))
+        constructor_points_prop <- results %>%
+            inner_join(races, by = "raceId") %>%
+            filter(constructorId == constructor_info$constructorId) %>%
+            group_by(driverId) %>%
+            summarize(points = sum(points)) %>%
+            mutate(prop = points / sum(points)) %>%
+            left_join(drivers, by = "driverId")
 
         if (nrow(constructor_info) > 0) {
             output$constructorDetails <- renderPrint({
@@ -319,6 +342,14 @@ server <- function(input, output) {
                     ylab("Points") +
                     ggtitle(paste("Points Scored by", constructor_info$name)) +
                     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+                    labs(fill = "Driver")
+            })
+            output$constructorPointsPropChart <- renderPlot({
+                ggplot(constructor_points_prop, aes(x = "", y = prop, fill = paste(forename, surname))) +
+                    geom_bar(stat = "identity", width = 1) +
+                    coord_polar("y", start = 0) +
+                    theme_void() +
+                    ggtitle(paste("Points Proportion by Driver for", constructor_info$name)) +
                     labs(fill = "Driver")
             })
         } else {
