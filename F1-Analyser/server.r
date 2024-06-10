@@ -266,6 +266,23 @@ server <- function(input, output) {
                     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
                     labs(fill = "Constructor")
             })
+
+            driver_status <- results %>%
+                filter(driverId == driver_info$driverId) %>%
+                left_join(status, by = "statusId") %>%
+                group_by(status) %>%
+                summarize(count = n()) %>%
+                mutate(percentage = count / sum(count) * 100)
+
+            output$driverStatusPie <- renderPlot({
+                ggplot(driver_status, aes(x = "", y = percentage, fill = status)) +
+                    geom_bar(width = 1, stat = "identity") +
+                    coord_polar("y", start = 0) +
+                    theme_void() +
+                    scale_fill_discrete(name = "Status") +
+                    ggtitle(paste("Status Distribution for", driver_info$forename, driver_info$surname)) +
+                    theme(plot.title = element_text(hjust = 0.5))
+            })
         } else {
             output$driverDetails <- renderPrint({
                 "Driver not found."

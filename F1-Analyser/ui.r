@@ -53,6 +53,10 @@ dashboardPage(
                     box(
                         title = "Driver Points by Season",
                         plotOutput("driverPointsChart")
+                    ),
+                    box(
+                        title = "Driver Status Distribution",
+                        plotOutput("driverStatusPie")
                     )
                 )
             ),
