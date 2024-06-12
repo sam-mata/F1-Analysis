@@ -314,13 +314,6 @@ server <- function(input, output) {
         constructor_name <- input$constructorSearch
         constructor_info <- constructors %>%
             filter(grepl(constructor_name, name, ignore.case = TRUE))
-        constructor_points_prop <- results %>%
-            inner_join(races, by = "raceId") %>%
-            filter(constructorId == constructor_info$constructorId) %>%
-            group_by(driverId) %>%
-            summarize(points = sum(points)) %>%
-            mutate(prop = points / sum(points)) %>%
-            left_join(drivers, by = "driverId")
 
         if (nrow(constructor_info) > 0) {
             output$constructorDetails <- renderPrint({
@@ -344,6 +337,15 @@ server <- function(input, output) {
                     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
                     labs(fill = "Driver")
             })
+
+            constructor_points_prop <- results %>%
+                inner_join(races, by = "raceId") %>%
+                filter(constructorId == constructor_info$constructorId) %>%
+                group_by(driverId) %>%
+                summarize(points = sum(points)) %>%
+                mutate(prop = points / sum(points)) %>%
+                left_join(drivers, by = "driverId")
+
             output$constructorPointsPropChart <- renderPlot({
                 ggplot(constructor_points_prop, aes(x = "", y = prop, fill = paste(forename, surname))) +
                     geom_bar(stat = "identity", width = 1) +
@@ -357,8 +359,9 @@ server <- function(input, output) {
                 "Constructor not found."
             })
 
-            # Clear the constructor points chart
+            # Clear the constructor points chart and points proportion chart
             output$constructorPointsChart <- renderPlot({})
+            output$constructorPointsPropChart <- renderPlot({})
         }
     })
 }
