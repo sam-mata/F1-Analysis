@@ -2,6 +2,8 @@
 
 An interactive web app for creating custom Formula 1 visualisations.
 
+> [!WARNING]  
+> This project is archived and no longer worked on.
 ---
 
 ## 1. Gallery
